@@ -1,48 +1,48 @@
 # Site settings
-title:       Pixyll
-email:       your_email@example.com
-author:      John Otander
-description: "A simple, beautiful theme for Jekyll that emphasizes content rather than aesthetic fluff."
+title:       Clhenrick
+email:       chrishenrick@gmail.com
+author:      Chris Henrick
+description: "Documenting my adventures in web-development, design, data, and maps."
 baseurl:     ""
-url:         "http://pixyll.com"
+url:         "https://clhenrick.github.io"
 
 # Google analytics
 google_analytics:
 
 # Optional features
-animated:           false
-show_related_posts: false
-show_post_footers:  false
+animated:           true
+show_related_posts: true
+show_post_footers:  true
 
 # Disqus post comments
 # (leave blank to disable Disqus)
 disqus_shortname:
 
 # Social icons
-show_social_icons: false
-github_username:
+show_social_icons: true
+github_username: clhenrick
 stackoverflow_id:
-twitter_username:
+twitter_username: chrislhenrick
 google_plus_id:
-linkedin_username:
+linkedin_username: chrishenrick
 angellist_username:
 bitcoin_url:
 paypal_url:
 flattr_button:
 
 # Post sharing icons
-show_sharing_icons: false
+show_sharing_icons: true
 share_text: 'Share this post!'
 # Change to 'true' to enable individual icons
 share_facebook: false
-share_twitter: false
+share_twitter: true
 share_googleplus: false
 share_linkedin: false
 share_digg: false
 share_tumblr: false
 share_reddit: false
 share_stumbleupon: false
-share_hackernews: false
+share_hackernews: true
 
 # Build settings
 markdown:     redcarpet
