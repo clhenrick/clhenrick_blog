@@ -2,17 +2,227 @@
 title: Scraping Photo Metadata
 layout: post
 date: 2015-05-29
-summary: Scraping photo exif data using node js for web mapping
-categories: data scraping, node js, web-mapping
+summary: Scraping digital photo exif data using Node JS for web mapping.
+categories: data scraping, node js, web-mapping, flickr-api
 ---
 
-I ended up finding a Node JS library that worked pretty well called Exif. I'm basically cleaning up a mess by a bunch of students at the Urban Ecologies program. Back in the fall of 2014 they took photos of vacant lots, abandoned buildings, new construction etc in Bushwick for a participatory mapping survey but did a horrible horrible job storing the data and photos. 
+Now that grad school life at the Parsons MFA Design and Technology program is finished, I've finally had some time to come back to a project I worked on in the fall of last year, the [Bushwick Community Map](http://www.bushwickcommunitymap.org). One important piece that has yet to be added to this project is data that was collected from a participatory mapping survey developed with the [North West Bushwick Community Group](http://www.nwbcommunity.org/) and students from the [Parsons Urban Ecologies program](http://www.newschool.edu/parsons/ms-design-urban-ecology/) last Fall. The survey involved mapping landuse in [Bushwick](http://en.wikipedia.org/wiki/Bushwick,_Brooklyn) (vacant lots or lots being used for informal purposes), abandoned buildings, and new construction. This data was collected as teams walked through the various census tracts in Bushwick, making observations on each block, and then filling out a form describing either a lot or building, recording the address, number of floors, state of distress, etc as well as photographing the site. 
 
-I'm the one stuck with actually making sense of and using the data for the Bushwick Community Map. They sent me a KML file with 700 features for roughly 1000+ photos which is wack. Not only that but the file names of the photos in the KML file were some how changed so there is no way to link to the photos, at least that I'm aware of.
+## Data Problems
+While each photo was taken with geo location tracking enabled, there was some poor management of the photographs collected by various teams. Photos were logically grouped by census tract in folders on Google Drive yet no naming convention was given to the photographs. For example, a sensible naming convention would have been something like:  
 
-Anyhow I was able to scrape the lat lon from the Exif data for like 99% of the photos and make a Geojson that also has urls for the photos I uploaded to Flickr. I grabbed the urls with the Flickr API then used the Node joiner module (thanks to you for pointing that one out to me) to create the final GeoJSON. 
+`<building-number>-<street>-<census-tract>.jpg`  
 
-## Notes:
-extract file name substring without the extension [reference](http://stackoverflow.com/questions/624870/regex-get-filename-without-extension-in-one-shot)  
+The way in which the Urban Ecologies students mapped the photos after they were collected was using Google Earth to produce a KML file of the photos' locations. The problem with this approach is that for some unknown reason the KML that was produced only had ~700 features while there were a total of 1008 photos taken. I only learned this after the Urban Ecologies group shared the data, KML, and photos with me. 
 
-	SELECT substring(file_name_column, '(.+?)(\.[^.]*$|$)') FROM table_name;
+To make working with the photos easier I first uploaded all 1008 photos to [Flickr](https://www.flickr.com/) which genorously gives users a whole terabyte of free storage. I then used the [Flickr API](https://www.flickr.com/services/api/) to grab the URLs and title for each uploaded photo and store them in a JSON file. For some reason I wasn't able to see the geo data for the photos using this method which definitely would have helped. 
+
+My original solution was to convert the KML file to GeoJSON format and then join it to the Flickr JSON data using the [joiner](https://www.npmjs.com/package/joiner) module for Node JS. Yet I soon realized this was not a good strategy as the KML file was missing ~300 photos. 
+
+Thankfully one last solution occured to me; I could scrape the [Exif metadata](http://en.wikipedia.org/wiki/Exchangeable_image_file_format) from the photos which includes latitude and longitude coordinates if geolocation was enabled from the camera. The question was, how to do this?
+
+## Node JS to the Rescue
+
+I ended up finding a Node JS library that worked pretty well called [Exif](https://github.com/gomfunkel/node-exif). This module allows to retreive the Exif metadata in a JSON format. From here I iterated over the Exif data from all of the photos and created a GeoJSON file which I was then able to join to the Flickr JSON data.
+
+The end result is that I successfully geocoded 1006 out of 1008 of the photos so that they can now be added to the Bushwick Community Map. Next up, integrating the survey photos and data!
+
+## Code:
+### SQL to parse photo title from file name:
+In CartoDB I eneded up extracting a substring of the filename --without the extension so that I could join the Exif GeoJSON and Flickr JSON datasets.  
+[reference](http://stackoverflow.com/questions/624870/regex-get-filename-without-extension-in-one-shot). The following query did the trick:
+
+`SELECT substring(file_name_column, '(.+?)(\.[^.]*$|$)') FROM table_name;`
+
+###Exif Data Extract:
+
+	// script to grab lat lon data from images
+	// processes a director of images and writes a geojson file containing the image name, lat, lon, modify data
+	// usage: touch photo_data.json && node parse_photos.js > photo_data.json
+
+	var fs = require('graceful-fs');
+	var ExifImage = require('exif').ExifImage;
+	var exifCount = 0;
+	var imgDir = path.join(__dirname, '../all_photos/');
+	var imgData = {
+	                "type" : "FeatureCollection",
+	                "crs": {
+	                  "type": "name",
+	                  "properties": {
+	                    "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+	                    }
+	                  },
+	                "features" : []
+	              };
+	var errors = [];
+
+	// converts lat lon from Degrees Minutes Seconds to Decimal Degrees
+	function convertDMSToDD(degrees, minutes, seconds, direction) {
+	    var dd = degrees + minutes/60 + seconds/(60*60);
+
+	    if (direction == "S" || direction == "W") {
+	        dd = dd * -1;
+	    } // Don't do anything for N or E
+	    return dd;
+	}
+
+	function parseExifData(exifObj, name) {
+	  var data = {
+	                "type" : "Feature",
+	                "geometry" : {
+	                  "type" : "Point",
+	                  "coordinates" : []
+	                },
+	                "properties" : {}
+	              };
+	  var d = exifObj;  
+	  var imgName = name.split('/')
+	  data.properties.file_name = imgName[imgName.length-1];
+	  data.coordinates[1] = convertDMSToDD(
+	                            d.gps.GPSLatitude[0],
+	                            d.gps.GPSLatitude[1],
+	                            d.gps.GPSLatitude[2],
+	                            d.gps.GPSLatitudeRef
+	                            );
+	  data.coordinates[0] = convertDMSToDD(
+	                            d.gps.GPSLongitude[0],
+	                            d.gps.GPSLongitude[1],
+	                            d.gps.GPSLongitude[2],
+	                            d.gps.GPSLongitudeRef
+	                            );
+	  data.properties.modify_date = d.image.ModifyDate;
+	  imgData.features.push(data);
+	  exifCount ++;
+
+	  if (exifCount === 1006) {
+	    imgData = JSON.stringify(imgData);
+	    errors = JSON.stringify(errors);
+	    console.log(imgData);
+	  }
+	}
+
+	function readImage(img) {
+	  try {
+	      new ExifImage({ image : img }, function (error, exifData) {
+	          if (error)            
+	            errors.push({name: img, err: error.message});
+	          else
+	            parseExifData(exifData, img);
+	      });
+	  } catch (error) {      
+	      errors.push({name: img, err: error.message});
+	  }  
+	}
+
+	function readDataDir(path) {
+	  var files = fs.readdirSync(path);
+	  var count = 0;
+	  files.forEach(function(file,i){
+	    file = '../all_photos/' + file;
+	    readImage(file);
+	    count++
+	  });
+	}
+
+	readDataDir('../all_photos/');
+
+### Flickr API Code
+	
+	var fs = require('fs'),
+	      jf = require('jsonfile'),
+	      Flickr = require('flickrapi'),
+	      async = require('async'),
+	      joiner = require('joiner'),
+	      GeoJson = require('geojson');
+
+	var flickrOptions = {
+	      api_key: "...",
+	      secret: "...",
+	      user_id: "..."
+	    };
+
+	var newGeoJson;
+
+	function callFlickrAPI() {
+
+	  var count = 0;
+	  var data = [];
+
+	  Flickr.tokenOnly(flickrOptions, function(error, flickr) {
+	    for (var i=1; i<4; i++) {
+	      flickr.photos.search({
+	        user_id: flickr.options.user_id,
+	        page: i,
+	        per_page: 500,
+	        extras: "url_m"
+	      }, 
+
+	      function(err, result) {
+	        
+	        if (err) { console.log('error: ', err); return; }              
+	        
+	        var photos = result.photos.photo;
+
+	        for (var j=0; j< photos.length; j++) {
+	          data.push(photos[j]);
+	          count ++;
+	        }
+
+	        if (count === 1008) {
+	          processJson(data);
+	        }        
+
+	      });  
+	    }      
+	  });
+	}
+
+	function processJson(data) {
+	  var i = 0,
+	        o = [];
+	  for (i; i < data.length; i++) {
+	    o.push({
+	      title : data[i].title,
+	      url : data[i].url_m
+	    });
+	  }
+	  jf.writeFile('flickrPhotoData.json', o, function(err) {
+	    if (err) { console.log('error: ', err); }
+	  })
+	  joinJson(o);
+	}
+
+	function joinJson(data) {
+	  var data_a = newGeoJson,
+	        data_b = data,
+	        key_a = 'name',
+	        key_b = 'title',
+	        data_joined = joiner.geoJson(data_a, key_a, data_b, key_b, 'properties');
+	  writeJson(data_joined);
+	}
+
+	function writeJson(data) {
+	  var file = "flickrData.json";
+	  jf.writeFile(file, data, function(err) {
+	    if (err) { console.log('writeJson error: ', err); return;}
+	    console.log('data written. report: ', data.report.prose.summary);
+	  })
+	}
+
+	function processGeoJson() {
+	  var inputGeoJson = JSON.parse(fs.readFileSync('../data/nwb_photos.geojson'));
+	  var jsonOut = [];
+	  for (var i = 0; i<inputGeoJson.features.length; i++) {
+	    jsonOut.push({
+	      name : inputGeoJson.features[i].properties.Name,
+	      lat : inputGeoJson.features[i].geometry.coordinates[1],
+	      lon : inputGeoJson.features[i].geometry.coordinates[0]
+	    });
+	    // console.log(inputGeoJson.features[i].geometry.coordinates);
+	  }
+	  
+	  newGeoJson = GeoJson.parse(jsonOut, {Point: ['lat', 'lon'], include: ['name']});
+	  callFlickrAPI();
+	}
+
+	processGeoJson();
