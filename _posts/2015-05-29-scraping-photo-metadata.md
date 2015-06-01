@@ -6,26 +6,38 @@ summary: Scraping digital photo exif data using Node JS for web mapping.
 categories: data scraping, node js, web-mapping, flickr-api
 ---
 
-Now that grad school life at the Parsons MFA Design and Technology program is finished, I've finally had some time to come back to a project I worked on in the fall of last year, the [Bushwick Community Map](http://www.bushwickcommunitymap.org). One important piece that has yet to be added to this project is data that was collected from a participatory mapping survey developed with the [North West Bushwick Community Group](http://www.nwbcommunity.org/) and students from the [Parsons Urban Ecologies program](http://www.newschool.edu/parsons/ms-design-urban-ecology/) last Fall. The survey involved mapping landuse in [Bushwick](http://en.wikipedia.org/wiki/Bushwick,_Brooklyn) (vacant lots or lots being used for informal purposes), abandoned buildings, and new construction. This data was collected as teams walked through the various census tracts in Bushwick, making observations on each block, and then filling out a form describing either a lot or building, recording the address, number of floors, state of distress, etc as well as photographing the site. 
+Now that my time as a grad student at the [Parsons MFA Design and Technology program](http://www.newschool.edu/parsons/mfa-design-technology/) is finished, I've finally had some time to come back to a project I worked on in the fall of last year, the [Bushwick Community Map](http://www.bushwickcommunitymap.org). One important piece that has yet to be added to this project is data that was collected from a participatory mapping survey developed with the [North West Bushwick Community Group](http://www.nwbcommunity.org/) and students from the [Parsons Urban Ecologies program](http://www.newschool.edu/parsons/ms-design-urban-ecology/) last Fall. The survey involved mapping landuse in [Bushwick](http://en.wikipedia.org/wiki/Bushwick,_Brooklyn) (eg: vacant lots and lots being used for informal purposes), abandoned buildings, and new construction. This data was collected as teams walked through the various census tracts in Bushwick, making observations on each block, and then filling out a form describing either a lot or building, recording the address, number of floors, state of distress, etc as well as photographing the site. 
 
 ## Data Problems
-While each photo was taken with geo location tracking enabled, there was some poor management of the photographs collected by various teams. Photos were logically grouped by census tract in folders on Google Drive yet no naming convention was given to the photographs. For example, a sensible naming convention would have been something like:  
+While each photo was taken with geo location tracking enabled, there was some poor management of the photographs collected by various teams. Granted the photos were logically grouped by census tract in folders on Google Drive, yet no unified naming convention was used to name the photographs. 
+
+![]({{site.url}}/assets/photo-naming.png)
+
+For example, a sensible naming convention could have been something like:  
 
 `<building-number>-<street>-<census-tract>.jpg`  
 
-The way in which the Urban Ecologies students mapped the photos after they were collected was using Google Earth to produce a KML file of the photos' locations. The problem with this approach is that for some unknown reason the KML that was produced only had ~700 features while there were a total of 1008 photos taken. I only learned this after the Urban Ecologies group shared the data, KML, and photos with me. 
+The way in which the Urban Ecologies students then mapped the photos after they were collected was using Google Earth to produce a KML file of the photos' locations. The problem with this approach is that for some reason unknown to me, the KML they produced only has ~700 features while there are a total of 1008 photos. I didn't learn this until after the Urban Ecologies group shared then survey data, KML, and photos with me. 
 
-To make working with the photos easier I first uploaded all 1008 photos to [Flickr](https://www.flickr.com/) which genorously gives users a whole terabyte of free storage. I then used the [Flickr API](https://www.flickr.com/services/api/) to grab the URLs and title for each uploaded photo and store them in a JSON file. For some reason I wasn't able to see the geo data for the photos using this method which definitely would have helped. 
+![]({{site.url}}/assets/bushwick_photos_qgis.png)
 
-My original solution was to convert the KML file to GeoJSON format and then join it to the Flickr JSON data using the [joiner](https://www.npmjs.com/package/joiner) module for Node JS. Yet I soon realized this was not a good strategy as the KML file was missing ~300 photos. 
+To make working with the photos easier I first uploaded all 1008 photos to [Flickr](https://www.flickr.com/) which genorously gives all users a whole terabyte of free storage. I then used the [Flickr API](https://www.flickr.com/services/api/) to [grab the URLs and title for each uploaded photo](#flickr-code) and store them in a JSON file. For some reason I wasn't able to see the geo data for the photos using this method which definitely would have helped save some time. 
 
-Thankfully one last solution occured to me; I could scrape the [Exif metadata](http://en.wikipedia.org/wiki/Exchangeable_image_file_format) from the photos which includes latitude and longitude coordinates if geolocation was enabled from the camera. The question was, how to do this?
+My original solution was to merge all the layers in the KML file, then convert it to a GeoJSON format and then join it to the Flickr JSON data using the [joiner](https://www.npmjs.com/package/joiner) module for Node JS. Yet I soon realized this was not a good strategy as the KML file was missing locations for ~300 photos. 
+
+Thankfully one last solution occured to me; I could scrape the [Exif metadata](http://en.wikipedia.org/wiki/Exchangeable_image_file_format) from the photos which includes latitude and longitude coordinates (only if geolocation was enabled from the camera). 
+
+The question was, how to do this?
 
 ## Node JS to the Rescue
 
-I ended up finding a Node JS library that worked pretty well called [Exif](https://github.com/gomfunkel/node-exif). This module allows to retreive the Exif metadata in a JSON format. From here I iterated over the Exif data from all of the photos and created a GeoJSON file which I was then able to join to the Flickr JSON data.
+I ended up finding a Node JS library that worked pretty well called [Exif](https://github.com/gomfunkel/node-exif). This module allows to retreive the Exif metadata in a JSON format. From here I [wrote a script](#exif-code) that iterates over the Exif data from all of the photos and outputs a GeoJSON file which I was then able to join to the Flickr JSON data. I ended up doing the join in [CartoDB](https://cartodb.com/) because they make it so easy to do.
 
-The end result is that I successfully geocoded 1006 out of 1008 of the photos so that they can now be added to the Bushwick Community Map. Next up, integrating the survey photos and data!
+The end result is that I successfully geocoded 1006 out of 1008 of the photos so that they can now be added to the Bushwick Community Map. 
+
+![]({{site.url}}/assets/bushwick_final_data_cartodb.png)
+
+Next up, integrating the survey photos and data to the Bushwick Community Map!
 
 ## Code:
 ### SQL to parse photo title from file name:
@@ -34,6 +46,7 @@ In CartoDB I eneded up extracting a substring of the filename --without the exte
 
 `SELECT substring(file_name_column, '(.+?)(\.[^.]*$|$)') FROM table_name;`
 
+<a name="exif-code">
 ###Exif Data Extract:
 
 	// script to grab lat lon data from images
@@ -126,6 +139,7 @@ In CartoDB I eneded up extracting a substring of the filename --without the exte
 
 	readDataDir('../all_photos/');
 
+<a name="flickr-code">
 ### Flickr API Code
 	
 	var fs = require('fs'),
