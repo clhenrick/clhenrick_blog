@@ -39,12 +39,13 @@ The end result is that I successfully geocoded 1006 out of 1008 of the photos so
 
 Next up, integrating the survey photos and data to the Bushwick Community Map!
 
-## Code:
+##Code:
 ### SQL to parse photo title from file name:
 In CartoDB I eneded up extracting a substring of the filename --without the extension so that I could join the Exif GeoJSON and Flickr JSON datasets.  
-[reference](http://stackoverflow.com/questions/624870/regex-get-filename-without-extension-in-one-shot). The following query did the trick:
+The following query did the trick:
 
-`SELECT substring(file_name_column, '(.+?)(\.[^.]*$|$)') FROM table_name;`
+`SELECT substring(file_name_column, '(.+?)(\.[^.]*$|$)') FROM table_name;`  
+[stackoverflow credit](http://stackoverflow.com/questions/624870/regex-get-filename-without-extension-in-one-shot)
 
 <a name="exif-code">
 ###Exif Data Extract:
