@@ -1,5 +1,5 @@
 ---
-title: Data processing methodology for Am I Rent Stabilized?
+title: Data processing methodology for Am I Rent Stabilized.com
 layout: post
 date: 2015-06-01
 summary: Documenting how I processed NYC open data and not so open data for the backend database of Am I Rent Stabilized.com
