@@ -3,7 +3,7 @@ title: Scraping Photo Metadata
 layout: post
 date: 2015-05-29
 summary: Scraping digital photo exif data using Node JS for web mapping.
-categories: data scraping node js web-mapping flickr-api
+categories: data web-scraping node js web-mapping flickr-api cartodb
 ---
 
 Now that my time as a grad student at the [Parsons MFA Design and Technology program](http://www.newschool.edu/parsons/mfa-design-technology/) is finished, I've finally had some time to come back to a project I worked on in the fall of last year, the [Bushwick Community Map](http://www.bushwickcommunitymap.org). One important piece that has yet to be added to this project is data that was collected from a participatory mapping survey developed with the [North West Bushwick Community Group](http://www.nwbcommunity.org/) and students from the [Parsons Urban Ecologies program](http://www.newschool.edu/parsons/ms-design-urban-ecology/) last Fall. The survey involved mapping landuse in [Bushwick](http://en.wikipedia.org/wiki/Bushwick,_Brooklyn) (eg: vacant lots and lots being used for informal purposes), abandoned buildings, and new construction. This data was collected as teams walked through the various census tracts in Bushwick, making observations on each block, and then filling out a form describing either a lot or building, recording the address, number of floors, state of distress, etc as well as photographing the site. 
@@ -21,7 +21,7 @@ The way in which the Urban Ecologies students then mapped the photos after they 
 
 ![]({{site.url}}/assets/bushwick_photos_qgis.png)
 
-To make working with the photos easier I first uploaded all 1008 photos to [Flickr](https://www.flickr.com/) which genorously gives all users a whole terabyte of free storage. I then used the [Flickr API](https://www.flickr.com/services/api/) to [grab the URLs and title for each uploaded photo](#flickr-code) and store them in a JSON file. For some reason I wasn't able to see the geo data for the photos using this method which definitely would have helped save some time. 
+To make working with the photos easier I first uploaded all 1008 photos to [Flickr](https://www.flickr.com/) which genorously gives all users a whole terabyte of free storage. I then used the [Flickr API](https://www.flickr.com/services/api/) to [grab the URLs and title for each uploaded photo](#flickr-api-code) and store them in a JSON file. For some reason I wasn't able to see the geo data for the photos using this method which definitely would have helped save some time. 
 
 My original solution was to merge all the layers in the KML file, then convert it to a GeoJSON format and then join it to the Flickr JSON data using the [joiner](https://www.npmjs.com/package/joiner) module for Node JS. Yet I soon realized this was not a good strategy as the KML file was missing locations for ~300 photos. 
 
@@ -31,7 +31,7 @@ The question was, how to do this?
 
 ## Node JS to the Rescue
 
-I ended up finding a Node JS library that worked pretty well called [Exif](https://github.com/gomfunkel/node-exif). This module allows to retreive the Exif metadata in a JSON format. From here I [wrote a script](#exif-code) that iterates over the Exif data from all of the photos and outputs a GeoJSON file which I was then able to join to the Flickr JSON data. I ended up doing the join in [CartoDB](https://cartodb.com/) because they make it so easy to do.
+I ended up finding a Node JS library that worked pretty well called [Exif](https://github.com/gomfunkel/node-exif). This module allows to retreive the Exif metadata in a JSON format. From here I [wrote a script](#exif-data-extract) that iterates over the Exif data from all of the photos and outputs a GeoJSON file which I was then able to join to the Flickr JSON data. I ended up doing the join in [CartoDB](https://cartodb.com/) because they make it so easy to do.
 
 The end result is that I successfully geocoded 1006 out of 1008 of the photos so that they can now be added to the Bushwick Community Map. 
 
@@ -41,14 +41,16 @@ Next up, integrating the survey photos and data to the Bushwick Community Map!
 
 ##Code:
 ### SQL to parse photo title from file name:
-In CartoDB I eneded up extracting a substring of the filename --without the extension so that I could join the Exif GeoJSON and Flickr JSON datasets.  
+In CartoDB I eneded up creating a new column for the exif geojson and populating it with a substring of the filename, the title without the file extension, so that I could join the Exif GeoJSON and Flickr JSON datasets.  
 The following query did the trick:
 
-`SELECT substring(file_name_column, '(.+?)(\.[^.]*$|$)') FROM table_name;`  
+```
+SELECT substring(file_name_column, '(.+?)(\.[^.]*$|$)') FROM table_name;
+```  
 [stackoverflow credit](http://stackoverflow.com/questions/624870/regex-get-filename-without-extension-in-one-shot)
 
-<a name="exif-code">
-###Exif Data Extract:
+
+###Exif Data Extract
 
 	// script to grab lat lon data from images
 	// processes a director of images and writes a geojson file containing the image name, lat, lon, modify data
@@ -140,7 +142,7 @@ The following query did the trick:
 
 	readDataDir('../all_photos/');
 
-<a name="flickr-code">
+
 ### Flickr API Code
 	
 	var fs = require('fs'),
@@ -241,3 +243,5 @@ The following query did the trick:
 	}
 
 	processGeoJson();
+
+[^ Back to the top](#top)
