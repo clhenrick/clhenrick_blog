@@ -274,6 +274,11 @@ pre {
   line-height: 1.11;
   overflow-x: scroll;
   margin-bottom: 0.88em;
+
+  code {
+    color: hsl(0,100%,95%);
+    line-height: 1.3em;  
+  }
 }
 
 .highlight .p {
