@@ -6,18 +6,18 @@ summary: Battling the task of downloading 311 data and importing it into Postgre
 categories: data postgresql open-data
 ---
 
-I've been lucky to have the opportunity to work with the incredibly talented author [Rebecca Solnit](#) on her new NYC Atlas. Rebecca has previously completed atlases for two other cities, they're titled [Infinite City, a San Francisco Atlas](#); and [Unfathomable City, a New Orleans Atlas](#); and they are anything but traditional city planning maps. While Rebecca is not a cartographer by trade (she hires others to make the maps in her books) she has a deep appreciation and in-depth knowledge of the field and thus draws inspiration from the rich history of printed maps. Rebecca has added her own unique touch and brought life to the maps in her books; they range from being quirky, mystifying, poignant, politically charged, or celebratory. Her maps offer a refreshing perspective on map making in the current deluge of maps that are bound to the web mercator projection, algorithmically rendered, and at times just plain ugly.
+I've been lucky to have the opportunity to work with the incredibly talented author [Rebecca Solnit](http://rebeccasolnit.net/) on her new book, Impossible Metropolis, an NYC Atlas. Rebecca has previously completed atlases for two other cities; [Infinite City, a San Francisco Atlas](http://rebeccasolnit.net/book/infinite-city-a-san-francisco-atlas/); and [Unfathomable City, a New Orleans Atlas](http://rebeccasolnit.net/book/unfathomable-city-a-new-orleans-atlas/); and they are anything but traditional city planning maps. While Rebecca is not a cartographer by trade (she hires others to make the maps in her books) she has a deep appreciation and in-depth knowledge of the field and thus draws inspiration from the rich history of printed maps. Rebecca has added her own unique touch and brought life to the maps in her books; they range from being quirky, mystifying, poignant, politically charged, or celebratory. Her maps offer a refreshing perspective on map making in the current deluge of maps that are bound to the web mercator projection, algorithmically rendered, and at times just plain ugly.
 
-As part of the map I'm working on for the NYC Atlas (I can't disclose its name yet!), Rebecca and her publishing partner [Joshua Jelly Schapiro](#) were very interested in looking into NYC's 311 data. This was an exciting opportunity for me to revisit the data, as it had been several years since I last used it when I made the [NYC Rats, Graffiti, and Wifi Hot Spots Map](#).
+As part of the map I'm working on for the NYC Atlas (I can't disclose its name yet!), Rebecca and her publishing partner [Joshua Jelly-Schapiro](http://berkeley.academia.edu/JoshuaJellySchapiro) were very interested in looking into NYC's 311 data. This was an exciting opportunity for me to revisit the data, as it had been several years since I last used it when I made the [NYC Rats, Graffiti, and Wifi Hot Spots Map](http://a.parsons.edu/~henrc131/MajorStudio1/seven/03_nyc-graffiti-rats-wifi/).
 
 ## Downloading 311 data from the NYC Open Data Portal
-Because the 311 dataset is so massive, and Socrata's servers aren't necessarily the fastest, it's not too easy to pull this data down from [NYC Open Data](#). The solution I came up with was to filter the data on the open data portal so that I only had to download a subset of the data. I grabbed everything from January 1, 2014 to present, made a new "view", then downloaded that data which still ended up being a roughly 1.5 GB CSV file!
+Because the 311 dataset is so massive, and Socrata's servers aren't necessarily the fastest, it's not too easy to pull this data down from [NYC Open Data](https://nycopendata.socrata.com/). The solution I came up with was to filter the data on the open data portal so that I only had to download a subset of the data. I grabbed everything from January 1, 2014 to present, made a new "view", then downloaded that data which still ended up being a roughly 1.5 GB CSV file!
 
 ## Importing 311 Data into PostgreSQL
-I prefer postgresql for a bunch of reasons, but probably the main is that the map / GIS geek in me really likes to use [PostGIS](#), which is an extension for PostgreSQL that allows for wrangling spatial data & geoprocessing.
+I prefer using **PostgreSQL** (also referred to as **Postgres**) as my go-to database for a bunch of reasons, but probably the main is that the map / GIS geek in me really likes to use the [PostGIS](http://postgis.net/) extension, which allows for wrangling spatial data & geoprocessing via SQL queries.
 
 ### Problem: importing a 1.5 GB CSV file into postgresql
-Typically I use csvkit's csvsql command line tool to import CSV data into Postgres. This normally works fairly well, but not in the case of a 1.5 GB CSV file. Basically, attempting to do this row by row *is not the answer!*  
+Typically I use **csvkit**'s [csvsql command line tool](http://csvkit.readthedocs.org/en/latest/scripts/csvsql.html) to import CSV data into **Postgres**. This normally works fairly well, but not in the case of a 1.5 GB CSV file. Basically, attempting to do this row by row *is not the answer!*  
 The following Allen Iverson poster comes to mind:
 
 ![war is not the answer]({{site.url}}/assets/warisnottheanswer1.jpg)
@@ -26,11 +26,11 @@ What we need is a way to bulk load the data.
 
 ### Solution: PGloader 
 
-PGloader is a tool that allows for programatically bulk loading of data into PostgreSQL. Using this method ended up taking a whole 5 minutes 2.127 seconds, instead of hanging up and eventually crashing my computer. Wow!
+**PGloader** is a tool that allows for programatically bulk loading of data into **PostgreSQL**. Using this method ended up taking just 5 minutes 2.127 seconds, instead of hanging up and eventually crashing my computer. I'd say that's an improvement!
 
-PGloader can be used one of two ways; by either writing a script or as a command line utility. Because I had yet to create the table in my `nyc_311` database, I decided to go with using a script. My friend [John Krauss](#) refered me to a pgloader script he used which helped me get going. The syntax for pgloader is PLpgSQL which is a bit strange when first encountered. 
+**PGloader** can be used one of two ways; by either writing a script or as a command line utility. Because I had yet to create the table in my `nyc_311` database, I decided to go with using a script. My friend [John Krauss](http://blog.johnkrauss.com/) refered me to a **pgloader** script he used which helped me get going. The syntax for pgloader is **PLpgSQL** which is a bit strange when first encountered, but not too difficult to follow. 
 
-Prior to writing the script I first wanted to pull out the 30 or so field names and make them database friendly. A quick n dirty bash script did the job:  
+Prior to writing the pgloader script a good first step was to pull out the 30 or so 311 complaint field names and rename them to be database friendly. A quick n dirty bash script did the job, it replaces spaces with underscores and converts text to lower case by grabbing the first line of the CSV file using **head** and piping it through **sed** and **tr**, then writing the output to a text file:  
 
 ```
 FILE_IN="311_requests_2014_to_present.csv"
@@ -38,8 +38,8 @@ FILE_OUT="311_field_list.txt"
 head -n 1 $FILE_IN  | tr ',' '\n'| sed -e 's/ /_/g' | tr '[A-Z]' '[a-z]' > $FILE_OUT
 ```
 
-
-### pgloader code:
+The list of field names was then used below to in the **pgloader** script.  
+Here's the **pgloader** script I ended up using to import the 311 complaints data:
 
 ```
 LOAD CSV
@@ -115,12 +115,21 @@ LOAD CSV
 ```
 
 ## Data Analysis
-Now that I had the data in Postgres, I could do some analysis (not before indexing the data, vacuum analyzing and clustering it).
+After I imported the data to Postgres I had some fun. Prior to getting down to analysis the data was indexed, vacuum analyzed, and clustered. These steps are very helpful to speed up queries:
+
+```
+CREATE UNIQUE INDEX requests_idx ON requests (unique_key);
+VACUUM ANALYZE requests;
+CLUSTER requests USING requests_idx;
+```
 
 Thus I was able to accomplish the following:
 
-- list all the [distinct complaint types](#)
-- pull out subsets of the data, such as [taxi complaints](#)
-- geocode data that has latitude & longitude values (see the taxi complaint link above).
+- list all the [distinct complaint types](https://gist.github.com/clhenrick/ab72cda39e7d5f67de67)
+- pull out subsets of the data, such as [taxi cab complaints](http://cdb.io/1BNrcTj).
+- geocode data where latitude & longitude values are not null (see the taxi complaint link above).
 
-All in all, this was a fun time I'd say, and it certainly paid off to have the 311 data in postgres where I can now get all crazy with it.
+## Next up:
+Well mapping subsets of the data is one step of course, but ideas Rebecca and I tossed around were dividing some complaint data categories qualitatively into either public love / civic mindedness (animal abuse, street conditions, scaffold safety) or animosity / lack of empathy (noise - house of worship, noise - parks) to as a total percent of the 311 data set.
+
+All in all, this was a fun time I'd say, and it certainly paid off to import the 311 complaint data in postgres where I can now "get all crazy with it."
