@@ -16,7 +16,7 @@ show_post_footers:  true
 
 # Disqus post comments
 # (leave blank to disable Disqus)
-disqus_shortname: chrishenrick
+disqus_shortname: clhenrick
 
 # Social icons
 show_social_icons: true
