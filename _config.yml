@@ -16,7 +16,7 @@ show_post_footers:  true
 
 # Disqus post comments
 # (leave blank to disable Disqus)
-disqus_shortname:
+disqus_shortname: chrishenrick
 
 # Social icons
 show_social_icons: true
@@ -34,7 +34,7 @@ flattr_button:
 show_sharing_icons: true
 share_text: 'Share this post!'
 # Change to 'true' to enable individual icons
-share_facebook: false
+share_facebook: true
 share_twitter: true
 share_googleplus: false
 share_linkedin: false
