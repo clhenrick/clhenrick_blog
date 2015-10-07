@@ -95,93 +95,95 @@ And another for the United State's per-capita data:
 As you can see, the total and per-capita data are structured in such a way that the values are grouped in sub-categories which are then grouped by category. For example for the category Exports there are sub-cateogries for coal, gas, crude oil, oil products, and electricity. This made it difficult to read the raw data into D3JS directly using the [d3.csv](https://github.com/mbostock/d3/wiki/CSV#csv) method. D3 also has a method for [parsing CSV data](https://github.com/mbostock/d3/wiki/CSV#parse), but it didn't make sense to do a ton of work parsing 8 CSV files in the browser each time the interactive loads or changes due to a button click.
 
 The output JSON data format I decided on would look something like the following schema:
-    
-    {
-        "country-one" : { // eg: United States
-          "category-one" : { // eg: production
-              "sub-category-one" : { // eg: coal
-                  "total" : [  // sample array for total of category-one > sub-category-two
-                    {
-                      "year" : 2007,
-                      "val" : 846
-                    },
-                    {
-                      "year" : 2008,
-                      "val" : 859
-                    },
-                    {
-                      "year" : 2009,
-                      "val" : 778
-                    },
-                    {
-                      "year" : 2010,
-                      "val" : 793
-                    },
-                    {
-                      "year" : 2011,
-                      "val" : 800
-                    },
-                    {
-                      "year" : 2012,
-                      "val" : 744
-                    },
-                    {
-                      "year" : 2013,
-                      "val" : 720
-                    }
-                  ], 
-                  "per_capita" : [ // sample array for per-capita of category-one > sub-category-two
-                    {
-                      "year" : 2007,
-                      "val" : 2.800
-                    },
-                    {
-                      "year" : 2008,
-                      "val" : 2.825
-                    },
-                    {
-                      "year" : 2009,
-                      "val" : 2.536
-                    },
-                    {
-                      "year" : 2010,
-                      "val" : 2.564
-                    },
-                    {
-                      "year" : 2011,
-                      "val" : 2.568
-                    },
-                    {
-                      "year" : 2012,
-                      "val" : 2.370
-                    },
-                    {
-                      "year" : 2013,
-                      "val" : 2.278
-                    }
-                  ], 
-                  "source" : ["Energy Information Administration"] // the data's source, this differs country to country
+
+```javascript    
+{
+    "country-one" : { // eg: United States
+      "category-one" : { // eg: production
+          "sub-category-one" : { // eg: coal
+              "total" : [  // sample array for total of category-one > sub-category-two
+                {
+                  "year" : 2007,
+                  "val" : 846
                 },
-              "sub-category-two" : { // eg: gas
-                  "total" : [...],
-                  "per_capita" : [...],
-                  "source" : [...]
-                },              
-              // additional sub-categories follow...
-              },
-            "category-two" : { // eg: consumption
-              "sub-category-one" : {  // eg: power-sector
-                  "total" : [...],
-                  "per_capita" : [...],
-                  "source" : [...]
+                {
+                  "year" : 2008,
+                  "val" : 859
                 },
-              // additional sub-categories ...
-            }
-            // additional categories ...
-          },          
-      "country-two" : {...}, // eg: Canada        
-      "country-three" : {...} // eg: China
-    }
+                {
+                  "year" : 2009,
+                  "val" : 778
+                },
+                {
+                  "year" : 2010,
+                  "val" : 793
+                },
+                {
+                  "year" : 2011,
+                  "val" : 800
+                },
+                {
+                  "year" : 2012,
+                  "val" : 744
+                },
+                {
+                  "year" : 2013,
+                  "val" : 720
+                }
+              ], 
+              "per_capita" : [ // sample array for per-capita of category-one > sub-category-two
+                {
+                  "year" : 2007,
+                  "val" : 2.800
+                },
+                {
+                  "year" : 2008,
+                  "val" : 2.825
+                },
+                {
+                  "year" : 2009,
+                  "val" : 2.536
+                },
+                {
+                  "year" : 2010,
+                  "val" : 2.564
+                },
+                {
+                  "year" : 2011,
+                  "val" : 2.568
+                },
+                {
+                  "year" : 2012,
+                  "val" : 2.370
+                },
+                {
+                  "year" : 2013,
+                  "val" : 2.278
+                }
+              ], 
+              "source" : ["Energy Information Administration"] // the data's source, this differs country to country
+            },
+          "sub-category-two" : { // eg: gas
+              "total" : [...],
+              "per_capita" : [...],
+              "source" : [...]
+            },              
+          // additional sub-categories follow...
+          },
+        "category-two" : { // eg: consumption
+          "sub-category-one" : {  // eg: power-sector
+              "total" : [...],
+              "per_capita" : [...],
+              "source" : [...]
+            },
+          // additional sub-categories ...
+        }
+        // additional categories ...
+      },          
+  "country-two" : {...}, // eg: Canada        
+  "country-three" : {...} // eg: China
+}
+```
 
 As you can see the raw data will be re-structured into arrays of objects, where each object contains the year and data-value for that year. These arrays are contained in an object representing a sub-category, which is contained in an object representing a category, which are then contained in objects for each country. Having the data structured this way would make the logic for toggling between category and subcategory in the interactive's user interface fairly straight-forward to code and integrate with D3.
 
@@ -189,54 +191,56 @@ As you can see the raw data will be re-structured into arrays of objects, where 
 
 To parse the data from it's original structure to the JSON structure I ended up writing a Node JS script that would take CSV files I downloaded for each worksheet, convert them to [multi-dimensional arrays](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array#Creating_a_two-dimensional_array), and then output values from those arrays into objects containing the year and data-value. The key parts of the script are the following functions:
 
-    function iterateMultiArray(arr,x,y) {
-        // iterates over a multi-dimensional array
-        // returns an array of numeric values
-    
-        var i = 0, l = arr.length, arrToReturn = [];
-    
-        for (i; i<l; i++) {
-            if (i===y) {
-                for (var j=0; j<arr[i].length; j++) {
-                    if (j>x) {
-                        var tmp = arr[i][j]
-                        arrToReturn.push(filterFloat(tmp));
-                    }
-                }               
-            }
-        }       
-    
-        return mapData2Years(arrToReturn);
-    }
-    
-    function mapData2Years(arr) {
-        // maps each value of an array to its corresponding year
-        // preferred data format for d3
-        var years = [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014];
-        var toReturn = [];
-        for (var i = 0; i < arr.length; i++) {
-            var obj = {};
-            obj.val = arr[i];
-            obj.year = years[i];
-        
-            // only add the data if it isn't null
-            if (obj.val >= 0) {
-                toReturn.push(obj);
-            }       
+```javascript
+function iterateMultiArray(arr,x,y) {
+    // iterates over a multi-dimensional array
+    // returns an array of numeric values
+
+    var i = 0, l = arr.length, arrToReturn = [];
+
+    for (i; i<l; i++) {
+        if (i===y) {
+            for (var j=0; j<arr[i].length; j++) {
+                if (j>x) {
+                    var tmp = arr[i][j]
+                    arrToReturn.push(filterFloat(tmp));
+                }
+            }               
         }
-        
-        return toReturn;
-    } 
-     
-    // cast data type from string to a number type
-    // if no data the value will be NaN and output value in JSON will be null
-    function filterFloat(value) {
-        value = value.replace(/ /g,'');
-        if(/^(\-|\+)?([0-9]+(\.[0-9]+)?|Infinity)$/
-            .test(value))
-            return Number(value);
-      return NaN;
+    }       
+
+    return mapData2Years(arrToReturn);
+}
+
+function mapData2Years(arr) {
+    // maps each value of an array to its corresponding year
+    // preferred data format for d3
+    var years = [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014];
+    var toReturn = [];
+    for (var i = 0; i < arr.length; i++) {
+        var obj = {};
+        obj.val = arr[i];
+        obj.year = years[i];
+    
+        // only add the data if it isn't null
+        if (obj.val >= 0) {
+            toReturn.push(obj);
+        }       
     }
+    
+    return toReturn;
+} 
+ 
+// cast data type from string to a number type
+// if no data the value will be NaN and output value in JSON will be null
+function filterFloat(value) {
+    value = value.replace(/ /g,'');
+    if(/^(\-|\+)?([0-9]+(\.[0-9]+)?|Infinity)$/
+        .test(value))
+        return Number(value);
+  return NaN;
+}
+```
 
 The function `iterateMultiArray` loops over values in a multi-dimensional array that is a result of using Node's file system module and a third party fast-csv module to read and parse each CSV file. You can think of mulit-dimensional arrays as lying on an x, y coordinate system that increases from top to bottom and left to right. So the y coordinate will be starting point for the outer array and the x coordinate will be the starting place for the inner array. A nested for-loop then retrieves the value from the inner array. That value is then converted from a string to a number data type and pushed to a temporary array. Finally, when the for-loops finish the temporary array is mapped to an array of years. However, if the data value returned from `filterFloat()` is null (`NaN`) then no object is created for that particular year. Finally an array of objects is returned.
 
