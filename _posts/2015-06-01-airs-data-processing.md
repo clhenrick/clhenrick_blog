@@ -45,7 +45,10 @@ A [Python script](https://github.com/clhenrick/dhcr-rent-stabilized-data/blob/ma
 ### 3. Determining NYC Properties That Are Likely Rent Stabilized
 
 After processing and geocoding the DHCR data it was imported into a PostgreSQL database using [CSVkit](https://csvkit.readthedocs.org/en/0.9.1/)'s csvsql command as follows:  
-`csvsql --db:///nyc_pluto --insert dhcr_rs_geocoded.csv --table dhcr_rs`
+
+```bash
+csvsql --db postgres:///nyc_pluto --insert dhcr_rs_geocoded.csv --table dhcr_rs
+```
 
 From here PostgreSQL was then used to analyze the data. [Here is a link to the entire SQL code](https://github.com/clhenrick/dhcr-rent-stabilized-data/blob/master/scripts/select_pluto_from_dhcr.sql), but the most important queries are the following:
 	
