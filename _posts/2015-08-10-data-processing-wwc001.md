@@ -96,7 +96,7 @@ As you can see, the total and per-capita data are structured in such a way that 
 
 The output JSON data format I decided on would look something like the following schema:
 
-```javascript    
+```json    
 {
     "country-one" : { // eg: United States
       "category-one" : { // eg: production

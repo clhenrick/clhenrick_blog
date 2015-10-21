@@ -15,7 +15,9 @@ While each photo was taken with geo location tracking enabled, there was some po
 
 For example, a sensible naming convention could have been something like:  
 
-`<building-number>-<street>-<census-tract>.jpg`  
+```
+<building-number>-<street>-<census-tract>.jpg
+```  
 
 The way in which the Urban Ecologies students then mapped the photos after they were collected was using Google Earth to produce a KML file of the photos' locations. The problem with this approach is that for some reason unknown to me, the KML they produced only has ~700 features while there are a total of 1008 photos. I didn't learn this until after the Urban Ecologies group shared then survey data, KML, and photos with me. 
 

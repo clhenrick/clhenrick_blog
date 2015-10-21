@@ -61,15 +61,19 @@ On top of a intuitive and easy to use dashboard, CartoDB provides a RESTful SQL 
 
 At the time of this writing the CartoDB SQL API endpoint is in the following format:
 
-`https://{account}.cartodb.com/api/v2/sql?q={SQL statement}&api_key={Your API key}`
+```http
+https://{account}.cartodb.com/api/v2/sql?q={SQL statement}&api_key={Your API key}
+```
 
 You would simply replace `{account}` with your CartoDB account name and `{SQL statement}` with your SQL query, eg:
 
-`https://my_account_name.cartodb.com/api/v2/sql?q=SELECT * FROM my_table`
+```http
+https://my_account_name.cartodb.com/api/v2/sql?q=SELECT * FROM my_table
+```
 
 The Response will be in JSON format and have the following structure:
 
-```javascript
+```json
 {
     "rows": [
         {...},
@@ -92,7 +96,7 @@ The Response will be in JSON format and have the following structure:
 
 Each row has data stored in an object with the column name as the key and that column's respective row as the value:
 
-```javascript
+```json
 {
     "nameoforganization": "Community Parents, Inc.",
     "neighborhood": "Bedford-Stuyvesant",
